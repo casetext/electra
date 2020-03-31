@@ -1,0 +1,14 @@
+data/*
+*.ipynb
+*.npy
+*.pyc
+.idea
+.DS_STORE
+env
+.env
+.zip
+.csv
+venv
+law_bert_*
+/wandb
+.vscode

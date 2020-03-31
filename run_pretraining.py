@@ -33,7 +33,6 @@ from pretrain import pretrain_helpers
 from util import training_utils
 from util import utils
 
-
 class PretrainingModel(object):
   """Transformer pre-training using the replaced-token-detection task."""
 
@@ -264,13 +263,34 @@ def get_generator_config(config: configure_pretraining.PretrainingConfig,
   return gen_config
 
 
-def model_fn_builder(config: configure_pretraining.PretrainingConfig):
+def model_fn_builder(config: configure_pretraining.PretrainingConfig): 
+                     #existing_pretraining_config=None):
   """Build the model for training."""
 
   def model_fn(features, labels, mode, params):
     """Build the model for training."""
     model = PretrainingModel(config, features,
                              mode == tf.estimator.ModeKeys.TRAIN)
+  
+    # Load pre-trained weights from checkpoint
+    init_checkpoint = None
+    if config.init_checkpoint is not None:
+      init_checkpoint = tf.train.latest_checkpoint(config.init_checkpoint,latest_filename=None)
+      utils.log("Using checkpoint", init_checkpoint)
+      
+    tvars = tf.trainable_variables()
+    scaffold_fn = None
+    if init_checkpoint:
+      assignment_map, _ = modeling.get_assignment_map_from_checkpoint(
+          tvars, init_checkpoint)
+      if config.use_tpu:
+        def tpu_scaffold():
+          tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+          return tf.train.Scaffold()
+        scaffold_fn = tpu_scaffold
+      else:
+        tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+    
     utils.log("Model is built!")
     if mode == tf.estimator.ModeKeys.TRAIN:
       train_op = optimization.create_optimizer(
@@ -284,6 +304,7 @@ def model_fn_builder(config: configure_pretraining.PretrainingConfig):
           mode=mode,
           loss=model.total_loss,
           train_op=train_op,
+          scaffold_fn=scaffold_fn,
           training_hooks=[training_utils.ETAHook(
               {} if config.use_tpu else dict(loss=model.total_loss),
               config.num_train_steps, config.iterations_per_loop,
@@ -368,6 +389,8 @@ def main():
   parser.add_argument("--data-dir", required=True,
                       help="Location of data files (model weights, etc).")
   parser.add_argument("--model-name", required=True,
+                      help="The name of the model being fine-tuned.")
+  parser.add_argument("--init_checkpoint", default=None, 
                       help="The name of the model being fine-tuned.")
   parser.add_argument("--hparams", default="{}",
                       help="JSON dict of model hyperparameters.")

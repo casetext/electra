@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import os
 
-
 class PretrainingConfig(object):
   """Defines pre-training hyperparameters."""
 
@@ -45,12 +44,12 @@ class PretrainingConfig(object):
 
     # training settings
     self.iterations_per_loop = 200
-    self.save_checkpoints_steps = 1000
+    self.save_checkpoints_steps = 5000 # 1000
     self.num_train_steps = 1000000
     self.num_eval_steps = 100
 
     # model settings
-    self.model_size = "small"  # one of "small", "base", or "large"
+    self.model_size = "base"  # one of "small", "base", or "large"
     # override the default transformer hparams for the provided model size; see
     # modeling.BertConfig for the possible hparams and util.training_utils for
     # the defaults
@@ -58,7 +57,7 @@ class PretrainingConfig(object):
         kwargs["model_hparam_overrides"]
         if "model_hparam_overrides" in kwargs else {})
     self.embedding_size = None  # bert hidden size by default
-    self.vocab_size = 30522  # number of tokens in the vocabulary
+    self.vocab_size = 32024 #30522  # number of tokens in the vocabulary
     self.do_lower_case = True  # lowercase the input?
 
     # generator settings
@@ -74,23 +73,27 @@ class PretrainingConfig(object):
     self.temperature = 1.0  # temperature for sampling from generator
 
     # batch sizes
-    self.max_seq_length = 128
+    self.max_seq_length = 256
     self.train_batch_size = 128
     self.eval_batch_size = 128
 
     # TPU settings
-    self.use_tpu = False
-    self.num_tpu_cores = 1
+    self.use_tpu = True
+    self.num_tpu_cores = 8
     self.tpu_job_name = None
-    self.tpu_name = None  # cloud TPU to use for training
-    self.tpu_zone = None  # GCE zone where the Cloud TPU is located in
+    self.tpu_name = 'electra'  # cloud TPU to use for training
+    self.tpu_zone = 'us-central1-b'  # GCE zone where the Cloud TPU is located in
     self.gcp_project = None  # project name for the Cloud TPU-enabled project
 
     # default locations of data files
     self.pretrain_tfrecords = os.path.join(
-        data_dir, "pretrain_tfrecords/pretrain_data.tfrecord*")
-    self.vocab_file = os.path.join(data_dir, "vocab.txt")
-    self.model_dir = os.path.join(data_dir, "models", model_name)
+        data_dir, "pretrain_data.tfrecord*")
+    
+    self.vocab_file = os.path.join(os.path.dirname(data_dir), "vocab/vocab.txt")
+    self.model_dir = os.path.join(os.path.dirname(data_dir), "models", model_name)
+    #self.init_checkpoint = os.path.join(data_dir, "models", model_name) # previous checkpoint
+    self.init_checkpoint = os.path.join(os.path.dirname(data_dir), "models", 'electra-base-cased') # previous checkpoint
+    #self.init_checkpoint = None
     results_dir = os.path.join(self.model_dir, "results")
     self.results_txt = os.path.join(results_dir, "unsup_results.txt")
     self.results_pkl = os.path.join(results_dir, "unsup_results.pkl")
@@ -114,17 +117,17 @@ class PretrainingConfig(object):
       self.embedding_size = 128
     # Here are the hyperparameters we used for larger models; see Table 6 in the
     # paper for the full hyperparameters
-    # else:
-    #   self.max_seq_length = 512
-    #   self.learning_rate = 2e-4
-    #   if self.model_size == "base":
-    #     self.embedding_size = 768
-    #     self.generator_hidden_size = 0.33333
-    #     self.train_batch_size = 256
-    #   else:
-    #     self.embedding_size = 1024
-    #     self.mask_prob = 0.25
-    #     self.train_batch_size = 2048
+    else:
+      self.max_seq_length = 256 #512
+      self.learning_rate = 2e-4
+      if self.model_size == "base":
+        self.embedding_size = 768
+        self.generator_hidden_size = 0.33333
+        self.train_batch_size = 256
+      else:
+        self.embedding_size = 1024
+        self.mask_prob = 0.25
+        self.train_batch_size = 2048
 
     # passed-in-arguments override (for example) debug-mode defaults
     self.update(kwargs)
