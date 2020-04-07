@@ -34,6 +34,11 @@ from util import training_utils
 from util import utils
 import ipdb
 
+#from trains import  Task
+#task = Task.create(project_name="test-pretrain-debug", task_name="my task")
+#task = Task.init(project_name='blah blah', task_name='pytorch mnist train')
+
+
 class PretrainingModel(object):
   """Transformer pre-training using the replaced-token-detection task."""
 
@@ -277,33 +282,33 @@ def model_fn_builder(config: configure_pretraining.PretrainingConfig):
     init_checkpoint = None
     if config.init_checkpoint is not None:
       init_checkpoint = tf.train.latest_checkpoint(config.init_checkpoint,latest_filename=None)
-      utils.log("Using checkpoint", init_checkpoint)
-      #import ipdb
-      #ipdb.set_trace()
+      utils.log("Found checkpoint", init_checkpoint)
 
-      
-    tvars = tf.trainable_variables()
+    all_vars = tf.global_variables()
     scaffold_fn = None
     if init_checkpoint:
       assignment_map, initialized_variable_names = modeling.get_assignment_map_from_checkpoint(
-          tvars, init_checkpoint)
+          all_vars, init_checkpoint)
       if config.use_tpu:
         def tpu_scaffold():
-          tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
-          print('initialzed tpu checkpoint')
-          return tf.train.Scaffold()
+          def init_function():
+            all_vars = tf.global_variables()
+            assignment_map, initialized_variable_names = modeling.get_assignment_map_from_checkpoint(all_vars, init_checkpoint)
+            tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+            utils.log('initialzed tpu checkpoint {}'.format(init_checkpoint))
+            utils.log("**** Trainable Variables ****")
+            for var in all_vars:
+              init_string = ""
+              if var.name in initialized_variable_names:
+                init_ssctring = ", *INIT_FROM_CKPT*"
+              utils.log("  name = %s, shape = %s%s", var.name, var.shape, init_string)
+            utils.log("Model is initialized!")
+          return tf.train.Scaffold(init_fn=init_function())
         scaffold_fn = tpu_scaffold
       else:
         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
       
-      tf.logging.info("**** Trainable Variables ****")
-      for var in tvars:
-        init_string = ""
-        if var.name in initialized_variable_names:
-          init_string = ", *INIT_FROM_CKPT*"
-        utils.log("  name = %s, shape = %s%s", var.name, var.shape,
-                  init_string)
-                          
+                                
       utils.log("Model is built!")
 
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -365,6 +370,7 @@ def train_or_eval(config: configure_pretraining.PretrainingConfig):
       cluster=tpu_cluster_resolver,
       model_dir=config.model_dir,
       save_checkpoints_steps=config.save_checkpoints_steps,
+      keep_checkpoint_max=None, #keep all checkpoints
       tpu_config=tpu_config)
   model_fn = model_fn_builder(config=config)
   estimator = tf.estimator.tpu.TPUEstimator(
@@ -419,8 +425,10 @@ def main():
       args.model_name, args.data_dir, **hparams)
   
   if config.use_wandb:
+    #from trains import  Task
+    #task = Task.init(project_name="electra-pretrain-debug", task_name="my task")
     import wandb
-    wandb.init(project="electra-pretrain-debug", sync_tensorboard=True)  
+    wandb.init(project=config.wandb_project_name, sync_tensorboard=True)  
     wandb.config.update(config.__dict__)
   #tf.logging.set_verbosity(tf.logging.ERROR)  
   train_or_eval(config)
