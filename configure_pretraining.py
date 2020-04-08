@@ -29,6 +29,8 @@ class PretrainingConfig(object):
     self.debug = False  # debug mode for quickly running things
     self.do_train = True  # pre-train ELECTRA
     self.do_eval = False  # evaluate generator/discriminator on unlabeled data
+    self.use_wandb = True
+    self.wandb_project_name = "electra-pretrain"
 
     # loss functions
     self.electra_objective = True  # if False, use the BERT objective instead
@@ -73,7 +75,7 @@ class PretrainingConfig(object):
     self.temperature = 1.0  # temperature for sampling from generator
 
     # batch sizes
-    self.max_seq_length = 256
+    self.max_seq_length = 512
     self.train_batch_size = 128
     self.eval_batch_size = 128
 
@@ -81,7 +83,7 @@ class PretrainingConfig(object):
     self.use_tpu = True
     self.num_tpu_cores = 8
     self.tpu_job_name = None
-    self.tpu_name = 'electra'  # cloud TPU to use for training
+    self.tpu_name = 'electra10'  # cloud TPU to use for training
     self.tpu_zone = 'us-central1-b'  # GCE zone where the Cloud TPU is located in
     self.gcp_project = None  # project name for the Cloud TPU-enabled project
 
@@ -92,7 +94,7 @@ class PretrainingConfig(object):
     self.vocab_file = os.path.join(os.path.dirname(data_dir), "vocab/vocab.txt")
     self.model_dir = os.path.join(os.path.dirname(data_dir), "models", model_name)
     #self.init_checkpoint = os.path.join(data_dir, "models", model_name) # previous checkpoint
-    self.init_checkpoint = os.path.join(os.path.dirname(data_dir), "models", 'electra-base-cased') # previous checkpoint
+    #self.init_checkpoint = os.path.join(os.path.dirname(data_dir), "models", 'electra-base-uncased-run2') # previous checkpoint
     #self.init_checkpoint = None
     results_dir = os.path.join(self.model_dir, "results")
     self.results_txt = os.path.join(results_dir, "unsup_results.txt")
