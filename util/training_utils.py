@@ -110,3 +110,4 @@ def get_bert_config(config):
   args["intermediate_size"] = 4 * args["hidden_size"]
   args.update(**config.model_hparam_overrides)
   return modeling.BertConfig.from_dict(args)
+

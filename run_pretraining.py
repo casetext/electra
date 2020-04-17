@@ -63,7 +63,7 @@ class PretrainingModel(object):
         config.embedding_size)
     if config.uniform_generator:
       mlm_output = self._get_masked_lm_output(masked_inputs, None)
-    elif config.electra_objective and config.untied_generator:
+    elif (config.electra_objective and config.untied_generator) or config.generator_only:
       generator = self._build_transformer(
           masked_inputs, is_training,
           bert_config=get_generator_config(config, self._bert_config),
@@ -76,20 +76,21 @@ class PretrainingModel(object):
       generator = self._build_transformer(
           masked_inputs, is_training, embedding_size=embedding_size)
       mlm_output = self._get_masked_lm_output(masked_inputs, generator)
-    fake_data = self._get_fake_data(masked_inputs, mlm_output.logits)
+          
     self.mlm_output = mlm_output
     self.total_loss = config.gen_weight * mlm_output.loss
 
     # Discriminator
     disc_output = None
-    if config.electra_objective:
+    if config.electra_objective and not config.generator_only:
+      fake_data = self._get_fake_data(masked_inputs, self.mlm_output.logits)
       discriminator = self._build_transformer(
           fake_data.inputs, is_training, reuse=not config.untied_generator,
           embedding_size=embedding_size)
       disc_output = self._get_discriminator_output(
           fake_data.inputs, discriminator, fake_data.is_fake_tokens)
       self.total_loss += config.disc_weight * disc_output.loss
-
+      
     # Evaluation
     eval_fn_inputs = {
         "input_ids": masked_inputs.input_ids,
@@ -99,7 +100,7 @@ class PretrainingModel(object):
         "masked_lm_weights": masked_inputs.masked_lm_weights,
         "input_mask": masked_inputs.input_mask
     }
-    if config.electra_objective:
+    if config.electra_objective and not config.generator_only:
       eval_fn_inputs.update({
           "disc_loss": disc_output.per_example_loss,
           "disc_labels": disc_output.labels,
@@ -122,7 +123,7 @@ class PretrainingModel(object):
       metrics["masked_lm_loss"] = tf.metrics.mean(
           values=tf.reshape(d["mlm_loss"], [-1]),
           weights=tf.reshape(d["masked_lm_weights"], [-1]))
-      if config.electra_objective:
+      if config.electra_objective and not config.generator_only:
         metrics["sampled_masked_lm_accuracy"] = tf.metrics.accuracy(
             labels=tf.reshape(d["masked_lm_ids"], [-1]),
             predictions=tf.reshape(d["sampled_tokids"], [-1]),

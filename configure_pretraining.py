@@ -33,7 +33,8 @@ class PretrainingConfig(object):
     self.wandb_project_name = "electra-pretrain"
 
     # loss functions
-    self.electra_objective = True  # if False, use the BERT objective instead
+    self.electra_objective = False  # if False, use the BERT objective instead
+    self.generator_only = True  # if False, use the Generator/MLM objective only
     self.gen_weight = 1.0  # masked language modeling / generator loss
     self.disc_weight = 50.0  # discriminator loss
     self.mask_prob = 0.15  # percent of input tokens to mask out / replace
@@ -83,7 +84,7 @@ class PretrainingConfig(object):
     self.use_tpu = True
     self.num_tpu_cores = 8
     self.tpu_job_name = None
-    self.tpu_name = 'electra10'  # cloud TPU to use for training
+    self.tpu_name = 'electra-generator3'  # cloud TPU to use for training
     self.tpu_zone = 'us-central1-b'  # GCE zone where the Cloud TPU is located in
     self.gcp_project = None  # project name for the Cloud TPU-enabled project
 
@@ -94,8 +95,7 @@ class PretrainingConfig(object):
     self.vocab_file = os.path.join(os.path.dirname(data_dir), "vocab/vocab.txt")
     self.model_dir = os.path.join(os.path.dirname(data_dir), "models", model_name)
     #self.init_checkpoint = os.path.join(data_dir, "models", model_name) # previous checkpoint
-    #self.init_checkpoint = os.path.join(os.path.dirname(data_dir), "models", 'electra-base-uncased-run2') # previous checkpoint
-    #self.init_checkpoint = None
+    self.init_checkpoint = None
     results_dir = os.path.join(self.model_dir, "results")
     self.results_txt = os.path.join(results_dir, "unsup_results.txt")
     self.results_pkl = os.path.join(results_dir, "unsup_results.pkl")
@@ -120,7 +120,7 @@ class PretrainingConfig(object):
     # Here are the hyperparameters we used for larger models; see Table 6 in the
     # paper for the full hyperparameters
     else:
-      self.max_seq_length = 256 #512
+      self.max_seq_length = 512
       self.learning_rate = 2e-4
       if self.model_size == "base":
         self.embedding_size = 768

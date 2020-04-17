@@ -28,6 +28,7 @@ import configure_pretraining
 from model import modeling
 from model import tokenization
 from pretrain import pretrain_data
+from util import utils
 
 
 def gather_positions(sequence, positions):
@@ -214,3 +215,18 @@ def sample_from_softmax(logits, disallow=None):
   gumbel_noise = -tf.log(-tf.log(uniform_noise + 1e-9) + 1e-9)
   return tf.one_hot(tf.argmax(tf.nn.softmax(logits + gumbel_noise), -1,
                               output_type=tf.int32), logits.shape[-1])
+
+def initialize_from_checkpoint(init_checkpoint):
+    all_vars = tf.get_collection(tf.GraphKeys.VARIABLES)
+    assignment_map, initialized_variable_names = modeling.get_assignment_map_from_checkpoint(all_vars, init_checkpoint)
+    tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+    print('initialzing tpu checkpoint {}'.format(init_checkpoint))
+    import ipdb
+    ipdb.set_trace()
+          
+    for var in all_vars:
+      init_string = ""
+      if var.name in initialized_variable_names:
+        init_string = ", *INIT_FROM_CKPT*"
+        utils.log("  name = %s, shape = %s%s", var.name, var.shape,
+                  init_string)

@@ -25,14 +25,18 @@ from __future__ import print_function
 import collections
 import re
 import tensorflow.compat.v1 as tf
+import ipdb
 
 
 def create_optimizer(
     loss, learning_rate, num_train_steps, weight_decay_rate=0.0, use_tpu=False,
     warmup_steps=0, warmup_proportion=0, lr_decay_power=1.0,
-    layerwise_lr_decay_power=-1, n_transformer_layers=None):
+    layerwise_lr_decay_power=-1, n_transformer_layers=None,
+    init_op=None
+    ):
   """Creates an optimizer and training op."""
   global_step = tf.train.get_or_create_global_step()
+  #ipdb.set_trace()
   learning_rate = tf.train.polynomial_decay(
       learning_rate,
       global_step,
@@ -56,6 +60,9 @@ def create_optimizer(
       exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"])
   if use_tpu:
     optimizer = tf.tpu.CrossShardOptimizer(optimizer)
+
+  if init_op:
+    init_op()  
 
   tvars = tf.trainable_variables()
   grads = tf.gradients(loss, tvars)
