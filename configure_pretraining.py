@@ -101,7 +101,7 @@ class PretrainingConfig(object):
     self.results_pkl = os.path.join(results_dir, "unsup_results.pkl")
 
     # update defaults with passed-in hyperparameters
-    self.update(kwargs)
+    #self.update(kwargs)
 
     self.max_predictions_per_seq = int((self.mask_prob + 0.005) *
                                        self.max_seq_length)
